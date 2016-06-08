@@ -6,7 +6,6 @@ var site = function() {
     };
 }();
 
-
 site.page.createViewModel = function(init) {	
 	site.page.viewModel = function(init) {
 		if (init === undefined) init = {};
@@ -17,7 +16,7 @@ site.page.createViewModel = function(init) {
 		var phone = ko.observable(init.phone).extend({ phone: undefined });
 		var pan = ko.observable(init.pan).extend({ pan: undefined });
 		var amount = ko.observable(init.amount).extend({ amount: undefined });
-		var quantity = ko.observable(init.quantity).extend({ number: undefined });
+		var quantity = ko.observable(init.quantity).extend({ number: undefined, mandatory: undefined });
 		var message = ko.observable("");
 
 		var hasPageError = $.validation.hasPageError;

@@ -67,9 +67,9 @@ $.validation = function() {
 	
 		var initObservable = function(model, groupName) {
 			if (model.errors !== undefined && model.errors !== null) return model;
-			model.validationGroup = groupName;
 			
-
+			model.validationGroup = groupName;
+			model.isNumber = ko.observable(false);
 			model.errors = ko.observableArray([]);
 			model.hasError = ko.computed(function () {
 				return model.errors().length > 0;
@@ -146,9 +146,13 @@ ko.extenders.mandatory = function (target, validationGroup) {
     function validate(newValue) {
         resetPrevious();
 
+		if (target.isNumber() && (newValue === 0 || newValue === "0")) {
+			target.errors.push(errMsgRequired);
+		}
+		
         if (newValue === undefined || newValue === null || newValue === "") {
             target.errors.push(errMsgRequired);
-        }
+        }	
     }
 
     validate(target());
@@ -189,10 +193,15 @@ ko.extenders.email = function (target, validationGroup) {
 
 ko.extenders.amount = function (target, validationGroup) {
     $.validation.initObservable(target, validationGroup);
+	target.isNumber(true);
+	
     var errMsgDecimal = "Please type in valid amount value e.g. ### ###.##";
     target.value = ko.computed(function() {
-		var value = target().replace(/ /g, "");
-		return value;			
+		if (typeof target() === 'string')
+		{
+			return target().replace(/ /g, "");			
+		}
+		return target();	
 	});
 
     function resetPrevious() {
@@ -201,15 +210,18 @@ ko.extenders.amount = function (target, validationGroup) {
 
     function validate(newValue) {
 		resetPrevious();
-		var cleaned = newValue.replace(/ /g, "");	
+		if (typeof newValue === 'string')
+		{
+			newValue = newValue.replace(/ /g, "");			
+		}
 		
-		if (cleaned === undefined || cleaned === null || cleaned === "") {
+		if (newValue === undefined || newValue === null || newValue === "") {
             return true;
         }
         
 		var regEx = /^(\d+\.?\d{0,2}|\.\d{1,2})$/ ;
 		
-		if (!regEx.test(cleaned)) {
+		if (!regEx.test(newValue)) {
             target.errors.push(errMsgDecimal);
         }
     }
@@ -223,6 +235,8 @@ ko.extenders.amount = function (target, validationGroup) {
 
 ko.extenders.number = function (target, validationGroup) {
     $.validation.initObservable(target, validationGroup);
+	target.isNumber(true);
+		
     var errMsgNumber= "Please type in a valid number.";
 
     function resetPrevious() {
@@ -255,7 +269,6 @@ ko.extenders.password = function (target, validationGroup) {
     var errMsgLength = "Minimum 5 characters";
 	var errMsgAplhaNumeric = "Must have numbers and characters";
   
-
     function resetPrevious() {
         target.errors.remove(errMsgLength);
 		target.errors.remove(errMsgAplhaNumeric);
@@ -286,7 +299,6 @@ ko.extenders.password = function (target, validationGroup) {
     validate(target());
     target.subscribe(validate);
 	$.validation.registerValidation(target);
-
 
     return target;
 };

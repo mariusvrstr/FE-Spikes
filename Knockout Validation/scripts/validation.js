@@ -4,25 +4,32 @@ $.validation = function() {
 		var registeredGroups = ko.observableArray([]);				
 		var hasPageError = ko.observable(false);				
 		var showPageMessages = ko.observable(false);
-		var createCondition = function(conditionAction, conditionalObservable, validationGroup) {			
-			var isFunction = typeof conditionAction === "function";
-			var returnsBoolean = typeof conditionAction() === "boolean";
-			var conditionAction =  ko.computed(conditionAction);						
+		
+		var createCondition = function (condition, conditionalObservable, validationGroup) {
+			var isFunction = false;
+			var returnsBoolean = false;
+
+			if (typeof condition === "function") {
+				isFunction = true;
+				returnsBoolean = typeof condition() === "boolean";
+			}
+
 			if (!isFunction || !returnsBoolean) {
 
-				throw "Conditional MadatoryAction provided is not a function that returns a boolean value.";
+				throw "Conditional Madatory Condition provided is not a function that returns a boolean value.";
 			}
-			
 			if (conditionalObservable !== undefined && typeof conditionalObservable !== "function") {
 				throw "For consditional validation include the onbservable responsible for changing a field to mandatory.";
-			}					
-		
+			}
+			
+			var conditionAction = ko.computed(condition);
+
 			return {
 				condition: conditionAction,
 				conditionalObservable: conditionalObservable,
 				validationGroup: validationGroup
 			}
-		}
+		};
 		
 		var hasErrorInArray = function(observables) {			
 			for (var k = observables.length - 1; k >= 0; k--) {
@@ -228,17 +235,16 @@ ko.extenders.boolean = function (target, validationGroup) {
     $.validation.initObservable(target, validationGroup);
     var errMsgBoolean = "This field must be true of false";
 	
-	target.value = ko.computed(function() {
-		if (target() !== undefined && (target().toLowerCase() === "true" || target() === true)) {
-			return true;
-		}
-		else if (target() !== undefined && (target().toLowerCase() === "false" || target() === false)) {
-			return false;
-		}		
+    target.value = ko.computed(function () {
+        if (target() !== undefined && (target() === true || (typeof target() === "string" && target().toLowerCase() === "true"))) {
+            return true;
+        }
+        else if (target() !== undefined && (target() === false || (typeof target() === "string" && (target().toLowerCase() === "false")))) {
+            return false;
+        }
 
-		return undefined;			
-	});
-	
+        return undefined;
+    });	
 	
     function resetPrevious() {
         target.errors.remove(errMsgBoolean);

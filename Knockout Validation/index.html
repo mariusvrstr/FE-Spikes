@@ -33,7 +33,9 @@
 			phone: "0845062122",
 			pan: "5359-2430-0107-2638",
 			amount: "230.45",
-			quantity: 0
+			quantity: 0,
+			rsid: undefined,
+			isCitizen: "false"
 		};
 		
 		site.page.createViewModel(data);
@@ -115,7 +117,27 @@
 				 <span class="error" data-bind="text: quantity.message"></span>
 			</div>
 		</div>
-		
+		<div class="row">
+			<div class="col-md-2">
+				<label for="isCitizen">Is RSA Citizen?</label>			
+			</div>
+			<div class="col-md-4">
+				Yes <input name="isCitizen" type="radio" value="true" data-bind="checked: isCitizen" >
+				No <input name="isCitizen" type="radio" value="false"  data-bind="checked: isCitizen">
+				<span class="error" data-bind="text: isCitizen.message"></span>		
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-2">			  
+				<label for="rsid"><span data-bind="visible: isCitizen.value">*</span>South African ID</label>			
+			</div>
+			<div class="col-md-4">
+				 <input type="text" class="form-control fill-max" id="rsid" data-bind="value: rsid, css: {error: rsid.hasError}">
+				 <span class="error" data-bind="text: rsid.message"></span>
+			</div>
+		</div>
+
+		<hr>		
 		<hr />
 		<div class="row">
 			<div class="col-md-1">

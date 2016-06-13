@@ -4,6 +4,25 @@ $.validation = function() {
 		var registeredGroups = ko.observableArray([]);				
 		var hasPageError = ko.observable(false);				
 		var showPageMessages = ko.observable(false);
+		var createCondition = function(conditionAction, conditionalObservable, validationGroup) {			
+			var isFunction = typeof conditionAction === "function";
+			var returnsBoolean = typeof conditionAction() === "boolean";
+			var conditionAction =  ko.computed(conditionAction);						
+			if (!isFunction || !returnsBoolean) {
+
+				throw "Conditional MadatoryAction provided is not a function that returns a boolean value.";
+			}
+			
+			if (conditionalObservable !== undefined && typeof conditionalObservable !== "function") {
+				throw "For consditional validation include the onbservable responsible for changing a field to mandatory.";
+			}					
+		
+			return {
+				condition: conditionAction,
+				conditionalObservable: conditionalObservable,
+				validationGroup: validationGroup
+			}
+		}
 		
 		var hasErrorInArray = function(observables) {			
 			for (var k = observables.length - 1; k >= 0; k--) {
@@ -128,10 +147,10 @@ $.validation = function() {
         hasPageError: hasPageError,
         showPageMessages: showPageMessages,
         setShowGroupMessages: setShowGroupMessages,
-        registeredGroups: registeredGroups
+        registeredGroups: registeredGroups,
+		createCondition: createCondition
     };
 }();
-
 
 /* Create the type specific validators */
 
@@ -162,6 +181,117 @@ ko.extenders.mandatory = function (target, validationGroup) {
     return target;
 };
 
+ko.extenders.conditionalMandatory = function (target, options) {
+    $.validation.initObservable(target, options.validationGroup);
+    var errMsgRequired = "This field is required";
+
+    function resetPrevious() {
+        target.errors.remove(errMsgRequired);
+    }
+	
+	function validateShared(newValue) {
+		resetPrevious();
+
+        var actionResult = options.condition();
+        if(!actionResult){
+            return true;
+        }
+
+        if (target.isNumber() && (newValue === 0 || newValue === "0")) {
+            target.errors.push(errMsgRequired);
+        }
+
+        if (newValue === undefined || newValue === null || newValue === "") {
+            target.errors.push(errMsgRequired);
+        }		
+	}
+
+    function validate(newValue) {
+		validateShared(newValue);
+    }	
+	function validateObservable() {
+		validateShared(target());
+		$.validation.validatePage();
+	}
+
+    validate(target());
+    target.subscribe(validate);	
+	if (options.conditionalObservable !== undefined) {
+		 options.conditionalObservable.subscribe(validateObservable);
+	}
+	$.validation.registerValidation(target);
+
+    return target;
+};
+
+ko.extenders.boolean = function (target, validationGroup) {
+    $.validation.initObservable(target, validationGroup);
+    var errMsgBoolean = "This field must be true of false";
+	
+	target.value = ko.computed(function() {
+		if (target() !== undefined && (target().toLowerCase() === "true" || target() === true)) {
+			return true;
+		}
+		else if (target() !== undefined && (target().toLowerCase() === "false" || target() === false)) {
+			return false;
+		}		
+
+		return undefined;			
+	});
+	
+	
+    function resetPrevious() {
+        target.errors.remove(errMsgBoolean);
+    }
+
+    function validate(newValue) {
+        resetPrevious();
+		
+		if (newValue === undefined || newValue === null || newValue === "") {
+            return true;
+        }
+		
+		if (newValue !== true && newValue.toLowerCase() !== "true" &&
+			newValue !== false && newValue.toLowerCase() !== "false")	{
+			target.errors.push(errMsgBoolean);
+		}
+    }
+
+    validate(target());
+    target.subscribe(validate);
+	$.validation.registerValidation(target);
+
+    return target;
+};
+
+ko.extenders.id_rsa = function (target, validationGroup) {
+    $.validation.initObservable(target, validationGroup);
+    var errMsgRsaId = "Requires a valid South African ID";
+	
+    function resetPrevious() {
+        target.errors.remove(errMsgRsaId);
+    }
+
+    function validate(newValue) {
+        resetPrevious();
+		
+		if (newValue === undefined || newValue === null || newValue === "") {
+            return true;
+        }
+		var regEx = /^(((\d{2}((0[13578]|1[02])(0[1-9]|[12]\d|3[01])|(0[13456789]|1[012])(0[1-9]|[12]\d|30)|02(0[1-9]|1\d|2[0-8])))|([02468][048]|[13579][26])0229))(( |-)(\d{4})( |-)(\d{3})|(\d{7}))/;
+		
+        if (!regEx.test(newValue)) {
+            target.errors.push(errMsgRsaId);
+        }		
+    }
+
+    validate(target());
+    target.subscribe(validate);
+	$.validation.registerValidation(target);
+
+    return target;
+};
+
 ko.extenders.email = function (target, validationGroup) {
     $.validation.initObservable(target, validationGroup);
     var errMsgEmail = "Invalid email structure used.";
@@ -172,12 +302,11 @@ ko.extenders.email = function (target, validationGroup) {
 
     function validate(newValue) {
         resetPrevious();
+		var regEx = /\S+@\S+\.\S+/;
 		
 		if (newValue === undefined || newValue === null || newValue === "") {
             return true;
         }
-		
-		var regEx = /\S+@\S+\.\S+/;
 		
         if (!regEx.test(newValue)) {
             target.errors.push(errMsgEmail);
@@ -210,6 +339,8 @@ ko.extenders.amount = function (target, validationGroup) {
 
     function validate(newValue) {
 		resetPrevious();
+		var regEx = /^(\d+\.?\d{0,2}|\.\d{1,2})$/;
+		
 		if (typeof newValue === 'string')
 		{
 			newValue = newValue.replace(/ /g, "");			
@@ -217,9 +348,7 @@ ko.extenders.amount = function (target, validationGroup) {
 		
 		if (newValue === undefined || newValue === null || newValue === "") {
             return true;
-        }
-        
-		var regEx = /^(\d+\.?\d{0,2}|\.\d{1,2})$/ ;
+        }	
 		
 		if (!regEx.test(newValue)) {
             target.errors.push(errMsgDecimal);
@@ -245,12 +374,11 @@ ko.extenders.number = function (target, validationGroup) {
 
     function validate(newValue) {
 		resetPrevious();
+		var regEx = /^\d+$/;
 		
 		if (newValue === undefined || newValue === null || newValue === "") {
             return true;
-        }
-        
-		var regEx = /^\d+$/;
+        }	
 		
         if (!regEx.test(newValue)) {
             target.errors.push(errMsgNumber);
@@ -280,8 +408,7 @@ ko.extenders.password = function (target, validationGroup) {
 		
 		if (newValue === undefined || newValue === null || newValue === "") {
 			return true;
-		}
-		
+		}		
 		
 		if (newValue.length < 5) {
 			target.errors.push(errMsgLength);

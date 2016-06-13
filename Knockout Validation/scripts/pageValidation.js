@@ -18,7 +18,15 @@ site.page.createViewModel = function(init) {
 		var amount = ko.observable(init.amount).extend({ amount: undefined });
 		var quantity = ko.observable(init.quantity).extend({ number: undefined, mandatory: undefined });
 		var message = ko.observable("");
-
+		var isCitizen = ko.observable(init.isCitizen).extend({ boolean: undefined });;
+		var requireForCitizens = function() {
+			if (isCitizen() === "true" || isCitizen() === true) {
+				return true;
+			}
+			
+			return false;
+		};			
+		var rsid = ko.observable(init.rsid).extend({ conditionalMandatory: $.validation.createCondition(requireForCitizens, isCitizen), id_rsa: undefined });
 		var hasPageError = $.validation.hasPageError;
 		var showMessages = $.validation.showPageMessages;
 		
@@ -46,7 +54,9 @@ site.page.createViewModel = function(init) {
 			hasPageError: hasPageError,
 			showMessages: showMessages,
 			onSubmit: onSubmit,
-			message: message
+			message: message,
+			isCitizen: isCitizen,
+			rsid: rsid
 		};		
 	}(init);	
 };
